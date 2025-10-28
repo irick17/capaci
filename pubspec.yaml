@@ -1,0 +1,68 @@
+name: capaci
+description: "Capaci: 焦る妊活から、賢く待つ妊活へ。精子の時間を知るアプリ。"
+publish_to: 'none'
+
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # --- V1.1 / V1.2 要件定義書 必須パッケージ ---
+  
+  # P0/P1: グラフ表示 (3.1.1)
+  syncfusion_flutter_charts: ^26.1.35 
+
+  # P1/P2: 状態管理 (5.2)
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # P2: 画像メモ (3.3)
+  image_picker: ^1.1.2 
+  
+  # P1/P2: トースト/スナックバー (3.1.2)
+  fluttertoast: ^8.2.6 
+  
+  # 日付フォーマット用 (intl)
+  intl: ^0.19.0 
+
+  # --- V1.1 (5.1) データ永続化 ---
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+  path_provider: ^2.1.3
+
+  # --- 追加機能パッケージ ---
+
+  # provider の Stream 制御用
+  rxdart: ^0.28.0 
+  
+  # P2: BBT入力 (シリンダー)
+  numberpicker: ^2.1.2 
+  
+  # P3: 初回コーチマーク
+  showcaseview: ^2.0.3 
+  
+  # P3: エラーハンドリング
+  logger: ^2.3.0 
+  
+  # P3: カレンダー機能
+  table_calendar: ^3.1.2 
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  
+  flutter_lints: ^4.0.0
+  
+  # Riverpod / Hive のコード生成用
+  riverpod_generator: ^2.4.0
+  build_runner: ^2.4.10
+  hive_generator: ^2.0.1
+
+flutter:
+  uses-material-design: true
+
