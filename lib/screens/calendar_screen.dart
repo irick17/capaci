@@ -4,7 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:table_calendar/table_calendar.dart';
 
 import '../models/cycle_models.dart';
-import '../providers/cycle_state_provider.dart';
+// *** 修正: 'isSameDay' が競合するため、provider由来のものを hide します ***
+import '../providers/cycle_state_provider.dart' hide isSameDay;
 import '../utils/logger.dart';
 import '../constants/app_strings.dart'; // AppStrings をインポート
 
@@ -139,6 +140,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
   /// 日付が選択されたときの処理
   void _onDaySelected(DateTime selectedDay, DateTime focusedDay) {
     final normalizedSelectedDay = _normalizeDate(selectedDay);
+    // *** 修正: ここで table_calendar の isSameDay を使用 ***
     if (!isSameDay(_selectedDay, normalizedSelectedDay)) {
       setState(() {
         _selectedDay = normalizedSelectedDay;
@@ -170,6 +172,7 @@ class _CalendarScreenState extends ConsumerState<CalendarScreen> {
             firstDay: _firstDay,
             lastDay: _lastDay,
             focusedDay: _focusedDay,
+            // *** 修正: ここで table_calendar の isSameDay を使用 ***
             selectedDayPredicate: (day) => isSameDay(_selectedDay, day),
             calendarFormat: _calendarFormat,
             startingDayOfWeek: StartingDayOfWeek.sunday, // 日曜始まり

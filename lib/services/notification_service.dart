@@ -21,11 +21,13 @@ class NotificationService {
 
     // 1. Android の初期設定
     // (通知アイコンは AndroidManifest.xml の android:icon="@mipmap/ic_launcher" を参照)
-    const AndroidInitializationSettings initializationSettingsAndroid =
+    // *** 修正: const -> final ***
+    final AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('ic_launcher'); // 'app_icon' から 'ic_launcher' に変更
 
     // 2. iOS の初期設定
-    const DarwinInitializationSettings initializationSettingsIOS =
+    // *** 修正: const -> final ***
+    final DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
       requestAlertPermission: false, // 権限要求は別途手動で行う
       requestBadgePermission: false,
@@ -34,7 +36,8 @@ class NotificationService {
     );
 
     // 3. 初期化設定の統合
-    const InitializationSettings initializationSettings =
+    // *** 修正: const -> final ***
+    final InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
@@ -143,3 +146,4 @@ class NotificationService {
   // TODO: 検査リマインド用のスケジュール通知メソッドを後で追加
   // Future<void> scheduleTestReminder(...) async { ... }
 }
+
