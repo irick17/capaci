@@ -334,7 +334,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
        // (修正) タイミング記録ボタン (♡) を BottomAppBar 内に移動し Visibility で制御
       // (修正) const を追加
-      bottomAppBar: BottomAppBar(
+      bottomNavigationBar: BottomAppBar( // <<< ★ エラー修正: bottomAppBar -> bottomNavigationBar
         shape: const CircularNotchedRectangle(),
         notchMargin: 6.0,
         child: Row(

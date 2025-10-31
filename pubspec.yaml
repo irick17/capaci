@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: '>=3.4.0 <4.0.0' # SDKバージョンはv3のままで問題ありません
+  sdk: '>=3.4.0 <4.0.0' # SDK v3 で動作
 
 dependencies:
   flutter:
@@ -12,20 +12,20 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # P0/P1: グラフ表示 (v21系がv26系に変わっていますが、v31でも問題ないはずです)
-  syncfusion_flutter_charts: ^26.1.42 # 以前の互換バージョンに戻します
+  # P0/P1: グラフ表示 (v26系)
+  syncfusion_flutter_charts: ^26.1.42
 
-  # *** 修正: Riverpod を v2 系にダウングレード ***
+  # P1/P2: 状態管理 (v2 系)
   flutter_riverpod: ^2.5.1
   riverpod_annotation: ^2.3.5
 
   # P2: 画像メモ
   image_picker: ^1.2.0
 
-  # P1/P2: トースト (v8系に戻します)
+  # P1/P2: トースト (v8系)
   fluttertoast: ^8.2.6
 
-  # 日付フォーマット用
+  # 日付フォーマット用 (v0.19系)
   intl: ^0.19.0
 
   # --- V1.1 (5.1) データ永続化 ---
@@ -38,7 +38,7 @@ dependencies:
   # P2: BBT入力
   numberpicker: ^2.1.2
 
-  # P3: 初回コーチマーク (v3系に戻します)
+  # P3: 初回コーチマーク (v3系)
   showcaseview: ^3.0.0
 
   # P3: エラーハンドリング
@@ -50,8 +50,8 @@ dependencies:
   # P3: カレンダー連携機能
   add_2_calendar: ^3.0.1
 
-  # P3: プッシュ通知機能
-  flutter_local_notifications: ^17.3.0 # v19でなくv17系
+  # *** 修正: v2 世代の riverpod と互換性のある v16 系 ***
+  flutter_local_notifications: ^16.3.2 
 
   cupertino_icons: ^1.0.8
 
@@ -59,15 +59,15 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
-  # (v4系に戻します)
-  flutter_lints: ^4.0.0
+  # *** 修正: v2 世代の build_runner と互換性のある v3.0.0 ***
+  flutter_lints: ^3.0.0
 
   # *** 修正: Riverpod / Hive / BuildRunner を v2 互換に統一 ***
   
-  # riverpod_generator を v2 系にダウングレード
+  # riverpod_generator を v2 系
   riverpod_generator: ^2.4.0
   
-  # build_runner を v2.4系にダウングレード
+  # build_runner を v2.4系
   build_runner: ^2.4.11
   
   # hive_generator (v2系)
@@ -85,3 +85,4 @@ flutter:
         - asset: assets/fonts/Inter-Regular.ttf
         - asset: assets/fonts/Inter-Bold.ttf
           weight: 700
+
