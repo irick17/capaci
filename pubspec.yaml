@@ -13,7 +13,8 @@ dependencies:
     sdk: flutter
 
   # P0/P1: グラフ表示 (v26系)
-  syncfusion_flutter_charts: ^26.1.42
+  # *** 修正: intl ^0.20.2 と互換性のあるバージョン (ログの提案) に更新 ***
+  syncfusion_flutter_charts: ^31.2.4 # 元: ^26.1.42
 
   # P1/P2: 状態管理 (v2 系)
   flutter_riverpod: ^2.5.1
@@ -26,7 +27,8 @@ dependencies:
   fluttertoast: ^8.2.6
 
   # 日付フォーマット用 (v0.19系)
-  intl: ^0.19.0
+  # *** 修正: SDKの要求 (0.20.2) に合わせる ***
+  intl: ^0.20.2
 
   # --- V1.1 (5.1) データ永続化 ---
   hive: ^2.2.3
@@ -52,6 +54,9 @@ dependencies:
 
   # *** 修正: v2 世代の riverpod と互換性のある v16 系 ***
   flutter_local_notifications: ^16.3.2 
+
+  # *** TODO 2: タイムゾーンパッケージ ***
+  timezone: ^0.9.4
 
   cupertino_icons: ^1.0.8
 

@@ -293,46 +293,33 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
               // V1 (2) 周期の規則性
               Text(AppStrings.onboardingFormLabel3, style: textTheme.bodyLarge),
-              // (警告修正: RadioListTile -> ListTile + Radio)
-              // Make entire tile tappable
-              InkWell(
-                onTap: () => setState(() => _isRegular = true),
-                child: Row(
-                  children: [
-                    Radio<bool>(
-                      value: true,
-                      groupValue: _isRegular,
-                      onChanged: (bool? value) {
-                        if (value != null) {
-                          setState(() {
-                            _isRegular = value;
-                          });
-                        }
-                      },
-                    ),
-                    const Text(AppStrings.onboardingFormOptionA),
-                  ],
-                ),
+              // *** 修正: InkWell/Row/Radio (非推奨警告) を RadioListTile に変更 ***
+              RadioListTile<bool>(
+                title: const Text(AppStrings.onboardingFormOptionA),
+                value: true,
+                groupValue: _isRegular,
+                onChanged: (bool? value) {
+                  if (value != null) {
+                    setState(() {
+                      _isRegular = value;
+                    });
+                  }
+                },
+                contentPadding: EdgeInsets.zero, // 余白を削除
               ),
-               InkWell(
-                 onTap: () => setState(() => _isRegular = false),
-                 child: Row(
-                   children: [
-                     Radio<bool>(
-                       value: false,
-                       groupValue: _isRegular,
-                       onChanged: (bool? value) {
-                          if (value != null) {
-                           setState(() {
-                             _isRegular = value;
-                           });
-                         }
-                       },
-                     ),
-                      const Text(AppStrings.onboardingFormOptionB),
-                   ],
-                 ),
-               ),
+              RadioListTile<bool>(
+                title: const Text(AppStrings.onboardingFormOptionB),
+                value: false,
+                groupValue: _isRegular,
+                onChanged: (bool? value) {
+                  if (value != null) {
+                    setState(() {
+                      _isRegular = value;
+                    });
+                  }
+                },
+                contentPadding: EdgeInsets.zero, // 余白を削除
+              ),
             ],
           ),
         ),
@@ -340,3 +327,4 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 }
+

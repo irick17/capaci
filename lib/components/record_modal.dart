@@ -578,7 +578,8 @@ class _RecordModalState extends ConsumerState<RecordModal> {
           color: colorScheme.tertiary
           ),
         contentPadding: EdgeInsets.zero, // Remove default padding if needed
-        activeColor: colorScheme.tertiary, // Color of the switch track when on
+        // *** 修正: 'activeColor' (非推奨) を 'activeTrackColor' に変更 ***
+        activeTrackColor: colorScheme.tertiary, // Color of the switch track when on
       );
   }
 
@@ -586,10 +587,8 @@ class _RecordModalState extends ConsumerState<RecordModal> {
   void _submitRecord() {
      logger.d("Submit record called.");
     // Combine integer and decimal parts for BBT
-    // Handle potential nulls gracefully, though NumberPicker should prevent them
-    final double? bbtValue = (_currentBBTInteger != null && _currentBBTFirstDecimal != null)
-       ? _currentBBTInteger + (_currentBBTFirstDecimal / 10.0)
-       : null; // Or handle as error if null shouldn't happen
+    // (*** 修正: _currentBBTInteger/_currentBBTFirstDecimal は null にならないため、null チェックを削除 ***)
+    final double? bbtValue = _currentBBTInteger + (_currentBBTFirstDecimal / 10.0);
 
     logger.d("Preparing record: Date=$_selectedDate, BBT=$bbtValue, Test=$_selectedTestResult, Image(New)=${_imageFile?.path}, Image(Existing)=$_existingImagePath, Timing=$_alsoRecordTiming");
 
@@ -615,3 +614,4 @@ class _RecordModalState extends ConsumerState<RecordModal> {
 //       date1.month == date2.month &&
 //       date1.day == date2.day;
 // }
+

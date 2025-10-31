@@ -6,6 +6,10 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:showcaseview/showcaseview.dart';
 // *** 追加 ***
 import 'package:flutter_localizations/flutter_localizations.dart';
+// *** TODO 2: timezone をインポート ***
+import 'package:timezone/data/latest_all.dart' as tz;
+// *** 修正: 'timezone.dart' は 'notification_service.dart' でのみ使用するため削除 ***
+// import 'package:timezone/timezone.dart' as tz;
 
 // *** P3: 通知サービスをインポート ***
 import 'services/notification_service.dart';
@@ -25,6 +29,16 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   // Initialize logger early
   logger.d("App starting...");
+
+  // *** TODO 2: Timezone データベースを初期化 ***
+  try {
+     logger.d("Initializing timezone database...");
+     tz.initializeTimeZones(); // タイムゾーンデータをロード
+     logger.d("Timezone database initialized.");
+  } catch (e, stackTrace) {
+     logger.e("Error initializing timezone database", error: e, stackTrace: stackTrace);
+  }
+  // *** TODO 2: Timezone 初期化ここまで ***
 
   // Initialize localization data
   try {
@@ -345,3 +359,4 @@ class CapaciApp extends StatelessWidget {
     );
   }
 }
+

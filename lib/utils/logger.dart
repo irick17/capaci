@@ -8,6 +8,7 @@ final logger = Logger(
       lineLength: 100, // 1行の最大長
       colors: true, // 色付けする
       printEmojis: true, // 絵文字を表示する
-      printTime: false // 時刻を表示しない (必要な場合は true に)
+      // *** 修正: 'printTime' (非推奨) を 'dateTimeFormat' に変更 ***
+      dateTimeFormat: DateTimeFormat.none // 時刻を表示しない (必要な場合は DateTimeFormat.shortTime など)
       ),
 );
