@@ -1,4 +1,4 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package.flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 // Remove unused rxdart import
 // import 'package:rxdart/rxdart.dart';
@@ -37,9 +37,83 @@ class CurrentCycleIndexNotifier extends StateNotifier<int> {
   }
 }
 
-// *** P1: グラフハイライト用 (フロー3 B) ***
-final highlightedDateProvider = StateProvider<DateTime?>((ref) => null);
+// *** P1: ハイライトアニメーション用 (フロー3 B) ***
+// (修正) 既存の highlightedDateProvider を、新しい Notifier から管理されるように変更
+final highlightedDateProvider = StateProvider<DateTime?>((ref) {
+  // Notifier が状態を管理するため、ここでは null を返す
+  return null;
+});
+
+// --- P1: グラフハイライト管理 ---
+
+// This notifier manages the blinking logic.
+final highlightAnimationProvider =
+    StateNotifierProvider<HighlightAnimationNotifier, bool>((ref) {
+  return HighlightAnimationNotifier(ref);
+});
+
+class HighlightAnimationNotifier extends StateNotifier<bool> {
+  final Ref _ref;
+  Timer? _blinkTimer;
+
+  HighlightAnimationNotifier(this._ref) : super(false);
+
+  void startHighlight(DateTime date) {
+    logger.d("HighlightAnimationNotifier: startHighlight for $date");
+    // Cancel any existing timer
+    _blinkTimer?.cancel();
+    
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    int blinkCount = 0;
+    // 5回トグル (On -> Off -> On -> Off -> On -> End(Off)) = 約1.5秒
+    const int maxBlinks = 5; 
+    const blinkDuration = Duration(milliseconds: 300);
+
+    _blinkTimer = Timer.periodic(blinkDuration, (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+
+      blinkCount++;
+      if (blinkCount > maxBlinks) {
+        // Stop timer and reset state
+        timer.cancel();
+        if (mounted) { // mounted チェックを追加
+          _ref.read(highlightedDateProvider.notifier).state = null;
+        }
+        logger.d("HighlightAnimationNotifier: Blink finished for $normalizedDate.");
+      } else {
+        if (mounted) { // mounted チェックを追加
+          // Toggle highlight
+          if (blinkCount % 2 == 1) {
+            // Odd: Show highlight (On)
+            _ref.read(highlightedDateProvider.notifier).state = normalizedDate;
+             logger.v("HighlightAnimationNotifier: Blink ON (count $blinkCount)");
+          } else {
+            // Even: Hide highlight (Off)
+            _ref.read(highlightedDateProvider.notifier).state = null;
+             logger.v("HighlightAnimationNotifier: Blink OFF (count $blinkCount)");
+          }
+        }
+      }
+    });
+
+    // Ensure the first blink starts immediately (On)
+    if (mounted) { // mounted チェックを追加
+      _ref.read(highlightedDateProvider.notifier).state = normalizedDate;
+      logger.v("HighlightAnimationNotifier: Blink ON (initial)");
+    }
+  }
+
+  @override
+  void dispose() {
+    _blinkTimer?.cancel();
+    super.dispose();
+  }
+}
 // *** P1: ハイライト用 Provider ここまで ***
+
 
 // --- P0/P1/P2 データ管理 ---
 final cycleDataProvider =
@@ -364,7 +438,7 @@ class CycleDataNotifier extends StateNotifier<List<CycleData>> {
       }
     } catch (e, stackTrace) {
        logger.e("Error adding or updating record for cycle $cycleId", error: e, stackTrace: stackTrace);
-       // Rethrow or provide feedback
+       // Rethrow or handle UI feedback if needed
         throw Exception("Failed to save record: $e");
     }
   }

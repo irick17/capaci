@@ -6,6 +6,10 @@ import 'dart:ui' as ui; // For PointMode
 // *** P1: ハイライトアニメーション用 (Timer) ***
 import 'dart:async';
 
+// *** P3: カレンダー連携 ***
+import 'package:add_2_calendar/add_2_calendar.dart';
+import 'package:fluttertoast/fluttertoast.dart';
+
 import '../components/timing_record_modal.dart';
 // ChartData を import
 import '../utils/prediction_logic.dart';
@@ -165,6 +169,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ),
         centerTitle: false,
         actions: [
+          // *** P3: カレンダー連携ボタン ***
+          IconButton(
+            icon: Icon(Icons.share_outlined, // 共有アイコン
+                 color: isGoldenTime ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant),
+            tooltip: AppStrings.shareCalendarTooltip,
+            onPressed: () {
+               logger.i("Share button pressed. Triggering _shareToCalendar...");
+               _shareToCalendar(); // カレンダー連携ロジックを呼び出す
+            },
+          ),
           // V1 (P3) 将来的なカレンダー機能 (アイコン変更)
           IconButton(
             icon: Icon(Icons.calendar_month_outlined, // More standard calendar icon
@@ -327,20 +341,28 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           mainAxisAlignment: MainAxisAlignment.start, // Align to start
           children: <Widget>[
             // *** P2: ♡ボタンを Visibility でラップ ***
+            // (修正) Visibility を追加
             Visibility(
                visible: isGoldenTime, // GOLDEN TIME 中のみ表示
-               // maintainSize: true, // 場所を確保しない場合は false or 省略
-               // maintainAnimation: true, // アニメーションが不要なら false or 省略
-               // maintainState: true, // 状態保持が不要なら false or 省略
-               child: Padding( // Add padding for spacing
-                 padding: const EdgeInsets.only(left: 16.0), // 左側に余白を追加
-                 child: IconButton(
-                   icon: Icon(Icons.favorite, color: colorScheme.tertiary, size: 28), // アイコンサイズ調整
-                   tooltip: AppStrings.timingButtonTooltip,
-                   onPressed: () {
-                      logger.d("Timing button (♡) pressed."); // Log button press
-                      _showTimingRecordModal(context, ref);
-                   },
+               // 場所を確保しない (visible: false のときにスペースを詰める)
+               maintainSize: false,
+               maintainAnimation: true,
+               maintainState: true,
+               child: AnimatedOpacity( // フェードイン/アウトのアニメーション
+                 // (修正) const を追加
+                 duration: const Duration(milliseconds: 200),
+                 opacity: isGoldenTime ? 1.0 : 0.0,
+                 child: Padding( // Add padding for spacing
+                   // (修正) const を追加
+                   padding: const EdgeInsets.only(left: 16.0), // 左側に余白を追加
+                   child: IconButton(
+                     icon: Icon(Icons.favorite, color: colorScheme.tertiary, size: 28), // アイコンサイズ調整
+                     tooltip: AppStrings.timingButtonTooltip,
+                     onPressed: () {
+                        logger.d("Timing button (♡) pressed."); // Log button press
+                        _showTimingRecordModal(context, ref);
+                     },
+                   ),
                  ),
                ),
              ),
@@ -846,23 +868,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   logger.d("Setting goldenTimeProvider to true.");
                                   ref.read(goldenTimeProvider.notifier).state = true;
                                   
-                                  // *** P1: ハイライトアニメーション (フロー3 B) ***
+                                  // *** P1: ハイライトアニメーション (フロー3 B) - 明滅ロジック ***
                                   final highlightedDate = _normalizeDate(record.date); // Normalize once
-                                  logger.d("Setting highlighted date: $highlightedDate");
-                                  ref.read(highlightedDateProvider.notifier).state = highlightedDate;
-                                  
-                                  // 1.5秒後にハイライトを解除
-                                  Future.delayed(const Duration(milliseconds: 1500), () {
-                                      try {
-                                        // 解除する日付が、セットした日付と同じか確認 (連続タップ対策)
-                                        if (ref.read(highlightedDateProvider.notifier).state == highlightedDate) {
-                                            logger.d("Clearing highlighted date: $highlightedDate");
-                                            ref.read(highlightedDateProvider.notifier).state = null;
-                                        }
-                                      } catch (e) {
-                                        logger.w("Error clearing highlight (provider disposed?): $e");
-                                      }
-                                  });
+                                  logger.d("Starting highlight blink for date: $highlightedDate");
+
+                                  // マネージャーにハイライトの開始を通知
+                                  ref.read(highlightAnimationProvider.notifier).startHighlight(highlightedDate);
                                   // *** P1: ハイライトここまで ***
 
                                   ScaffoldMessenger.of(modalContext).showSnackBar(
@@ -1007,6 +1018,81 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
      }
 
   }
+
+  /// *** P3: カレンダー連携ロジック ***
+  Future<void> _shareToCalendar() async {
+    logger.d("Share to calendar requested...");
+    final cycleDataAsync = ref.read(currentCycleDataProvider);
+
+    models.CycleData? cycleData;
+    if (cycleDataAsync is AsyncData<models.CycleData?>) {
+      cycleData = cycleDataAsync.value;
+    }
+
+    if (cycleData == null) {
+      logger.w("No cycle data available to share.");
+      Fluttertoast.showToast(msg: AppStrings.feedbackCalendarError);
+      return;
+    }
+
+    // グラフ構築に使用するのと同じソート済みレコードを取得
+    final records = (cycleData.records?.toList() ?? [])
+      ..sort((a, b) => a.date.compareTo(b.date));
+    
+    // 排卵ゾーン情報を取得
+    final Map<String, dynamic> ovulationZoneInfo =
+        _predictionLogic.getOvulationZones(cycleData, records);
+    final List<ChartData> ovulationZones = ovulationZoneInfo['zones'] as List<ChartData>;
+
+    if (ovulationZones.isEmpty) {
+      logger.w("No ovulation zones found to share for cycle ${cycleData.id}.");
+      Fluttertoast.showToast(msg: AppStrings.feedbackCalendarNoZone);
+      return;
+    }
+
+    // ゾーンの開始時刻と終了時刻を抽出
+    // getOvulationZones は [start(0), start(1), end(1), end(0)] の順で返す想定
+    final DateTime startDate = ovulationZones[0].x;
+    final DateTime endDate = ovulationZones[2].x;
+
+    logger.d("Creating calendar event: ${AppStrings.shareCalendarEventTitle} from $startDate to $endDate");
+
+    // add_2_calendar の Event オブジェクトを作成
+    final Event event = Event(
+      title: AppStrings.shareCalendarEventTitle,
+      description: AppStrings.shareCalendarEventDesc,
+      location: 'Capaci App', // (任意)
+      startDate: startDate,
+      endDate: endDate,
+      allDay: false, // 時間指定のイベントとして登録
+      // (任意) iOS用のURLスキーム (カレンダーアプリに戻るため)
+      // iosParams: const IOSParams(
+      //   reminder: Duration(minutes: 30), // 30分前にリマインダー
+      //   url: 'capaci://', // (アプリのURLスキームを設定した場合)
+      // ),
+      // (任意) Android用の設定
+      // androidParams: const AndroidParams(
+      //   emailInvites: [], // パートナーのメールアドレス (UIから入力させる必要がある)
+      // ),
+    );
+
+    // カレンダー追加のダイアログを表示
+    try {
+      final success = await Add2Calendar.addEvent2Cal(event);
+      if (success == true) { // addEvent2Cal は bool? を返す可能性がある
+        logger.i("Successfully added event to calendar.");
+        Fluttertoast.showToast(msg: AppStrings.feedbackCalendarSuccess);
+      } else {
+        logger.w("Failed to add event to calendar (user cancelled or error).");
+        // (任意) ユーザーキャンセルの場合はトースト不要かもしれない
+        // Fluttertoast.showToast(msg: AppStrings.feedbackCalendarError);
+      }
+    } catch (e, stackTrace) {
+      logger.e("Error adding event to calendar", error: e, stackTrace: stackTrace);
+      Fluttertoast.showToast(msg: "${AppStrings.feedbackCalendarError}: $e");
+    }
+  }
+
 
   /// V1.1 (3.1.1) / V1.2 (2.5) / V1 (3.3) ヘルプモーダル
   void _buildHelpModal(

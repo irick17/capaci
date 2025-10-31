@@ -75,6 +75,13 @@ dependencies:
   # P3: カレンダー機能
   table_calendar: ^3.1.3 # Updated version
 
+  # P3: カレンダー連携機能
+  add_2_calendar: ^2.5.0
+
+  # *** P3: プッシュ通知機能 ***
+  flutter_local_notifications: ^17.2.1
+
+
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.6
@@ -136,4 +143,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/custom-fonts/#from-packages
-

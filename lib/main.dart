@@ -7,12 +7,18 @@ import 'package:showcaseview/showcaseview.dart';
 // *** 追加 ***
 import 'package:flutter_localizations/flutter_localizations.dart';
 
+// *** P3: 通知サービスをインポート ***
+import 'services/notification_service.dart';
 
 import 'models/cycle_models.dart';
 import 'startup_wrapper.dart'; // V1 (フロー 1)
 // logger を import (main でも使う可能性)
 import 'utils/logger.dart';
 
+
+// *** P3: main を Future<void> に変更し、ProviderScope をグローバルに定義 ***
+// (ProviderScope を runApp の外に移動し、初期化時に ref を使えるようにする)
+final container = ProviderContainer();
 
 void main() async {
   // Ensure bindings are initialized
@@ -69,10 +75,22 @@ void main() async {
      // Consider showing an error message to the user or exiting
   }
 
+  // *** P3: 通知サービスの初期化と権限要求 ***
+  try {
+    final notificationService = container.read(notificationServiceProvider);
+    await notificationService.initialize();
+    await notificationService.requestPermissions();
+    logger.d("Notification service initialized and permissions requested.");
+  } catch (e, stackTrace) {
+     logger.e("Error initializing notification service", error: e, stackTrace: stackTrace);
+  }
+  // *** P3: 通知設定ここまで ***
+
 
   logger.d("Running app...");
   runApp(
-     ProviderScope(
+     UncontrolledProviderScope( // (変更) ProviderScope -> UncontrolledProviderScope
+       container: container,   // (追加) 既存のコンテナを渡す
       // (エラー修正: child -> builder を使用)
       child: ShowCaseWidget(
          // builder でアプリのルートウィジェットを返す
@@ -327,4 +345,3 @@ class CapaciApp extends StatelessWidget {
     );
   }
 }
-

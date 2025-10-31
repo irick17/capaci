@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>Capaci2</string>
+	<string>Capaci</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -13,7 +13,7 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>capaci2</string>
+	<string>capaci</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -31,19 +31,28 @@
 	<key>UISupportedInterfaceOrientations</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>
 		<string>UIInterfaceOrientationPortraitUpsideDown</string>
-		<string>UIInterfaceOrientationLandscapeLeft</string>
-		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+
+	<!-- *** P3 カレンダー連携: 権限許可の文言 *** -->
+	<key>NSCalendarsUsageDescription</key>
+	<string>予測された排卵ゾーンをカレンダーに登録し、パートナーと共有するためにカレンダーへのアクセス許可が必要です。</string>
+	<!-- *** P2 画像メモ: 権限許可の文言 (既存の可能性あり) *** -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>排卵検査薬の画像を記録するために写真ライブラリへのアクセス許可が必要です。</string>
+	<key>NSCameraUsageDescription</key>
+	<string>排卵検査薬の画像を撮影するためにカメラへのアクセス許可が必要です。</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>カメラでの撮影時にマイクを使用する可能性があります（ビデオ録画の場合など）。</string>
+
 </dict>
 </plist>
+

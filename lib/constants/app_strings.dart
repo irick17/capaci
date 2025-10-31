@@ -105,5 +105,18 @@ class AppStrings {
   static const String feedbackDataMissing = "記録がありませんでした。予測グラフを表示します。";
   static const String feedbackError = "エラーが発生しました。もう一度お試しください。";
 
+  // 7. P3 カレンダー連携
+  static const String shareCalendarTooltip = 'カレンダーで共有';
+  static const String shareCalendarEventTitle = 'Capaci: 予測排卵ゾーン';
+  static const String shareCalendarEventDesc = '予測される排卵ゾーンの目安です。パートナーとの共有にご利用ください。';
+  static const String feedbackCalendarSuccess = 'カレンダーに予定を追加しました';
+  static const String feedbackCalendarError = 'カレンダーへの追加に失敗しました';
+  static const String feedbackCalendarNoZone = 'カレンダーに登録できる予測排卵ゾーンが見つかりません。';
+
+  // *** 8. P3 プッシュ通知 ***
+  static const String notificationGoldenTimeTitle = 'Capaci'; // アプリ名
+  static const String notificationGoldenTimeBody = 'GOLDEN TIME が始まりました！';
+  static const String notificationReminderTitle = 'Capaci - 検査リマインド';
+  static const String notificationReminderBody = 'そろそろ検査の時間です（1日2回推奨）';
 }
 

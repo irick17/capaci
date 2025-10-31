@@ -1,6 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- *** P3: 通知機能のための権限 *** -->
+    <!-- API 33 (Tiramisu) 以上で必要 -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+    <!-- (任意) スケジュール通知のため、起動完了の検知 -->
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+    <!-- (任意) 正確なアラーム（スケジュール通知）のため -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- *** P3: 通知権限ここまで *** -->
+
+
     <application
-        android:label="capaci2"
+        android:label="Capaci"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -25,6 +36,21 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+
+        <!-- *** P3: 通知機能のためのレシーバー (スケジュール通知用) *** -->
+        <!-- (flutter_local_notifications が自動的に追加する場合もあるが、明示的に記載) -->
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationReceiver" />
+        <receiver android:exported="false" android:name="com.dexterous.flutterlocalnotifications.ScheduledNotificationBootReceiver">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED"/>
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON"/>
+            </intent-filter>
+        </receiver>
+        <!-- *** P3: 通知レシーバーここまで *** -->
+
+
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data
