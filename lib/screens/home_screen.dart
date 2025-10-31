@@ -1,11 +1,15 @@
 // (エラー修正: import パス修正)
 // ignore_for_file: unused_import
 
+// *** 修正: dart:ui に修正 ***
 import 'dart:ui' as ui; // For PointMode
+// *** P1: ハイライトアニメーション用 (Timer) ***
+import 'dart:async';
 
 import '../components/timing_record_modal.dart';
 // ChartData を import
 import '../utils/prediction_logic.dart';
+// *** 修正: package:flutter/material.dart に修正 ***
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // (エラー修正: import パス修正 & DateFormat のため)
@@ -21,14 +25,13 @@ import '../constants/app_strings.dart';
 // V1.1 (5.1) データモデル (エラー修正: prefix 'models' を追加)
 import '../models/cycle_models.dart' as models;
 // V1.1 (5.2) 状態管理 (Provider)
-// (エラー修正: hide 不要)
 import '../providers/cycle_state_provider.dart';
 // コーチマーク用に追加
 import '../providers/settings_provider.dart';
 // logger を import
 import '../utils/logger.dart';
-// カレンダー画面 import (★ エラー: calendar_screen.dart はまだ存在しないためコメントアウト)
-// import 'calendar_screen.dart';
+// *** 修正: カレンダー画面をインポート ***
+import 'calendar_screen.dart';
 
 
 /// 画面遷移図 (GA-01): ホーム (統合グラフ) 画面
@@ -166,18 +169,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           IconButton(
             icon: Icon(Icons.calendar_month_outlined, // More standard calendar icon
                  color: isGoldenTime ? colorScheme.onPrimaryContainer : colorScheme.onSurfaceVariant),
-            tooltip: 'カレンダー表示 (未実装)', // Add tooltip
+            tooltip: 'カレンダー表示', // (修正) ツールチップ
             onPressed: () {
-              // (★ エラー: CalendarScreen はまだ存在しないためコメントアウト)
-              // Navigator.push(
-              //   context,
-              //   MaterialPageRoute(builder: (context) => const CalendarScreen()),
-              // );
-               logger.i("Calendar button pressed (Not implemented yet)"); // 代わりにログ出力
-                ScaffoldMessenger.of(context).showSnackBar(
-                  // (修正) const を追加
-                  const SnackBar(content: Text('カレンダー機能は現在開発中です。'), duration: Duration(seconds: 2)),
-                );
+              // *** 修正: CalendarScreen への遷移を実装 ***
+               logger.i("Calendar button pressed. Navigating to CalendarScreen...");
+               Navigator.push(
+                 context,
+                 MaterialPageRoute(builder: (context) => const CalendarScreen()),
+               );
+               // *** 修正ここまで ***
             },
             // (任意) GOLDEN TIME時の色変更
             // color: isGoldenTime ? colorScheme.onPrimaryContainer : null, // Handled above
@@ -320,7 +320,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
        // (修正) タイミング記録ボタン (♡) を BottomAppBar 内に移動し Visibility で制御
       // (修正) const を追加
-      bottomNavigationBar: BottomAppBar(
+      bottomAppBar: BottomAppBar(
         shape: const CircularNotchedRectangle(),
         notchMargin: 6.0,
         child: Row(
@@ -487,6 +487,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
      final bool isOvulationConfirmed = ovulationZoneInfo['isConfirmed'] as bool;
       logger.d("Ovulation zones: ${ovulationZones.length} points, Confirmed: $isOvulationConfirmed");
 
+    // *** P1: ハイライト対象の日付を Watch ***
+    final highlightedDate = ref.watch(highlightedDateProvider);
+    logger.d("Building chart, highlighted date: $highlightedDate");
+
 
     // (修正) const を追加
     return Padding(
@@ -574,8 +578,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           _buildPredictedSpermStandbySeries(predictedSpermZones, colorScheme),
           _buildOvulationZoneSeries(ovulationZones, isOvulationConfirmed, colorScheme), // Pass calculated zones and flag
           // Draw lines/bars next
-          _buildLhSeries(combinedLhData, lastRecordDate, colorScheme),
-          _buildBbtSeries(combinedBbtData, lastRecordDate, colorScheme),
+          // *** P1: highlightedDate を渡す ***
+          _buildLhSeries(combinedLhData, lastRecordDate, colorScheme, highlightedDate),
+          _buildBbtSeries(combinedBbtData, lastRecordDate, colorScheme, highlightedDate),
           // Draw markers last (foreground)
           _buildTimingMarkers(records, colorScheme), // Pass sorted records
         ],
@@ -586,7 +591,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// P1/P2: LHレベル (棒グラフ) - 確定と予測を1つのシリーズで描画
   /// (修正) pointColorMapper を使用して予測を半透明にする
   ColumnSeries<models.CycleRecord, DateTime> _buildLhSeries(
-      List<models.CycleRecord> dataSource, DateTime lastRecordDate, ColorScheme colorScheme) {
+      List<models.CycleRecord> dataSource, DateTime lastRecordDate, ColorScheme colorScheme, DateTime? highlightedDate) { // *** P1: highlightedDate を受け取る ***
     // Filter out 'none' results *before* passing to the series
     final lhData =
         dataSource.where((r) => r.testResult != models.TestResult.none).toList();
@@ -605,6 +610,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       spacing: 0.2, // Adjust spacing between bars
       // Use pointColorMapper to differentiate predicted bars
       pointColorMapper: (models.CycleRecord record, _) {
+          // *** P1: ハイライト判定 ***
+          bool isHighlighted = highlightedDate != null && isSameDay(record.date, highlightedDate);
+          if (isHighlighted) {
+            logger.d("Highlighting LH bar for ${record.date}");
+            return colorScheme.error; // ハイライト色 (例: エラー色)
+          }
+          // *** P1: ハイライト判定ここまで ***
+
           bool isPrediction = record.date.isAfter(lastRecordDate);
           // V1.2 (2.1) 予測は半透明 (Opacity 0.5), 確定は不透明 (Opacity 1.0)
           // (修正) withAlpha を使う
@@ -618,7 +631,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// P1/P2: 基礎体温 (折れ線グラフ) - 確定と予測を1つのシリーズで描画
   /// (修正) pointColorMapper を使用して予測マーカーを半透明にする
   SplineSeries<models.CycleRecord, DateTime> _buildBbtSeries(
-      List<models.CycleRecord> dataSource, DateTime lastRecordDate, ColorScheme colorScheme) {
+      List<models.CycleRecord> dataSource, DateTime lastRecordDate, ColorScheme colorScheme, DateTime? highlightedDate) { // *** P1: highlightedDate を受け取る ***
     // Filter out null BBT values *before* passing to the series
     final bbtData = dataSource.where((r) => r.bbt != null).toList();
 
@@ -640,9 +653,22 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         shape: DataMarkerType.circle,
         borderWidth: 1.5,
         height: 6, width: 6 // Slightly larger markers
+        // *** P1: ハイライト判定 (マーカーサイズと枠線) ***
+        // (注: SplineSeries の markerSettings は全ポイント共通のため、
+        //   特定の点だけサイズを変えるのは pointColorMapper ほど単純ではない)
+        // (※より高度な実装では SplineSeries を2つ (通常とハイライト) に分ける必要があるが、
+        //   ここでは pointColorMapper で色を変えることで「ハイライト」とする)
       ),
       // Use pointColorMapper for marker color/opacity
        pointColorMapper: (models.CycleRecord record, _) {
+           // *** P1: ハイライト判定 ***
+          bool isHighlighted = highlightedDate != null && isSameDay(record.date, highlightedDate);
+          if (isHighlighted) {
+            logger.d("Highlighting BBT marker for ${record.date}");
+            return colorScheme.error; // ハイライト色
+          }
+          // *** P1: ハイライト判定ここまで ***
+
           bool isPrediction = record.date.isAfter(lastRecordDate);
           // V1.2 (2.1) 予測マーカーは半透明 (Opacity 0.5), 確定マーカーは不透明 (Opacity 1.0)
            // (修正) withAlpha を使う
@@ -708,7 +734,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       : colorScheme.errorContainer.withAlpha((255 * 0.3).round()); // Adjust opacity
 
      // Add subtle border matching the fill color for better definition
-     final Color borderColor = isConfirmed ? colorScheme.error.withAlpha(50) : colorScheme.errorContainer.withAlpha(50);
+     final Color borderColor = isConfirmed ? colorScheme.error.withAlpha(80) : colorScheme.errorContainer.withAlpha(80); // (修正) 境界線のアルファ値を調整
 
 
     return RangeAreaSeries<ChartData, DateTime>(
@@ -721,8 +747,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       color: zoneColor,
       borderWidth: 1.0, // Add border
       borderColor: borderColor,
-      // Optionally add dashArray for predicted state if desired
-      // dashArray: isConfirmed ? null : <double>[3, 3],
+      // *** 修正: isConfirmed に基づいて dashArray を設定 ***
+      dashArray: isConfirmed ? null : const <double>[4, 4], // 予測の場合は点線
     );
   }
 
@@ -819,6 +845,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                     record.testResult == models.TestResult.strongPositive) {
                                   logger.d("Setting goldenTimeProvider to true.");
                                   ref.read(goldenTimeProvider.notifier).state = true;
+                                  
+                                  // *** P1: ハイライトアニメーション (フロー3 B) ***
+                                  final highlightedDate = _normalizeDate(record.date); // Normalize once
+                                  logger.d("Setting highlighted date: $highlightedDate");
+                                  ref.read(highlightedDateProvider.notifier).state = highlightedDate;
+                                  
+                                  // 1.5秒後にハイライトを解除
+                                  Future.delayed(const Duration(milliseconds: 1500), () {
+                                      try {
+                                        // 解除する日付が、セットした日付と同じか確認 (連続タップ対策)
+                                        if (ref.read(highlightedDateProvider.notifier).state == highlightedDate) {
+                                            logger.d("Clearing highlighted date: $highlightedDate");
+                                            ref.read(highlightedDateProvider.notifier).state = null;
+                                        }
+                                      } catch (e) {
+                                        logger.w("Error clearing highlight (provider disposed?): $e");
+                                      }
+                                  });
+                                  // *** P1: ハイライトここまで ***
+
                                   ScaffoldMessenger.of(modalContext).showSnackBar(
                                     // (修正) const を追加
                                     const SnackBar(
@@ -1201,6 +1247,22 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
+// *** P1: ハイライトアニメーション用にヘルパー関数を追加 ***
+
+/// 時刻情報を除去した DateTime を返すヘルパー
+DateTime _normalizeDate(DateTime date) {
+  return DateTime(date.year, date.month, date.day);
+}
+
+/// 2つの DateTime が同じ日付か (時刻を無視して) 判定するヘルパー
+bool isSameDay(DateTime date1, DateTime date2) {
+  return date1.year == date2.year &&
+      date1.month == date2.month &&
+      date1.day == date2.day;
+}
+// *** P1: ヘルパー関数ここまで ***
+
+
 // --- Custom Painters for Legend ---
 
 class LinePainter extends CustomPainter {
@@ -1221,6 +1283,53 @@ class LinePainter extends CustomPainter {
 
     final paint = Paint()
       ..color = color
+      ..strokeWidth = 2.0 // Match line width
+      ..style = PaintingStyle.stroke;
+
+    final path = Path();
+    path.moveTo(0, size.height / 2);
+    path.lineTo(size.width, size.height / 2);
+
+    if (isDashed) {
+      // Create dashed path
+      final dashPath = Path();
+      const double dashWidth = 4.0;
+      const double dashSpace = 4.0;
+      double distance = 0.0;
+      // (修正) computeMetrics() が空でないことを確認
+      final metrics = path.computeMetrics();
+      // *** 修正: metrics が空でないことを確認 ***
+      if (metrics.isNotEmpty) {
+        final metric = metrics.first;
+         while (distance < metric.length) { // Use metric.length
+          dashPath.addPath(metric.extractPath(distance, distance + dashWidth), Offset.zero);
+          distance += dashWidth + dashSpace;
+        }
+        canvas.drawPath(dashPath, paint);
+      } else {
+         logger.w("LinePainter: Could not compute metrics for dashing.");
+         // Fallback to solid line?
+         // canvas.drawPath(path, paint);
+      }
+    } else {
+      canvas.drawPath(path, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+// Optional: Painter for dashed area representation if needed
+class DashedRectPainter extends CustomPainter {
+  final Color color;
+  // (修正) const constructor
+  const DashedRectPainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
       ..strokeWidth = 1.0
       ..style = PaintingStyle.stroke;
 
@@ -1237,7 +1346,4 @@ class LinePainter extends CustomPainter {
 
 
 // ChartData は prediction_logic.dart から export される
-
-
-
 

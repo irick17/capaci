@@ -37,6 +37,10 @@ class CurrentCycleIndexNotifier extends StateNotifier<int> {
   }
 }
 
+// *** P1: グラフハイライト用 (フロー3 B) ***
+final highlightedDateProvider = StateProvider<DateTime?>((ref) => null);
+// *** P1: ハイライト用 Provider ここまで ***
+
 // --- P0/P1/P2 データ管理 ---
 final cycleDataProvider =
     StateNotifierProvider<CycleDataNotifier, List<CycleData>>((ref) {
@@ -308,13 +312,15 @@ class CycleDataNotifier extends StateNotifier<List<CycleData>> {
           logger.d("Existing record found at index $index for date ${newRecord.date}, updating.");
           recordToSave = records[index]; // Get reference to existing record
           // Update fields
+          // (修正) BBT が null の場合も上書きする
           recordToSave.bbt = newRecord.bbt;
           if (newRecord.testResult != TestResult.none) {
               recordToSave.testResult = newRecord.testResult;
           } else {
              // If newRecord is 'none', keep existing value unless explicitly clearing?
-             // Current logic keeps existing if new is 'none'. Decide if this is correct.
-             // logger.d("New test result is 'none', keeping existing: ${recordToSave.testResult}");
+             // (修正) 'none' の場合は 'none' で上書きする（選択解除を反映）
+             recordToSave.testResult = TestResult.none;
+             logger.d("New test result is 'none', setting to none.");
           }
           recordToSave.imagePath = newRecord.imagePath; // Allows clearing with null
           recordToSave.isTiming = newRecord.isTiming; // Update timing status
