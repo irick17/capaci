@@ -1,4 +1,4 @@
-import 'package.flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // (★ 修正: 'package.flutter_riverpod' -> 'package:flutter_riverpod')
 import 'package:hive_flutter/hive_flutter.dart';
 // Remove unused rxdart import
 // import 'package:rxdart/rxdart.dart';
@@ -38,17 +38,10 @@ class CurrentCycleIndexNotifier extends StateNotifier<int> {
 }
 
 // *** P1: ハイライトアニメーション用 (フロー3 B) ***
-// (修正) 既存の highlightedDateProvider を、新しい Notifier から管理されるように変更
-final highlightedDateProvider = StateProvider<DateTime?>((ref) {
-  // Notifier が状態を管理するため、ここでは null を返す
-  return null;
-});
+final highlightedDateProvider = StateProvider<DateTime?>((ref) => null);
 
-// --- P1: グラフハイライト管理 ---
-
-// This notifier manages the blinking logic.
-final highlightAnimationProvider =
-    StateNotifierProvider<HighlightAnimationNotifier, bool>((ref) {
+/// P1: ハイライトアニメーションを管理する Notifier
+final highlightAnimationProvider = StateNotifierProvider<HighlightAnimationNotifier, bool>((ref) {
   return HighlightAnimationNotifier(ref);
 });
 
@@ -58,52 +51,27 @@ class HighlightAnimationNotifier extends StateNotifier<bool> {
 
   HighlightAnimationNotifier(this._ref) : super(false);
 
-  void startHighlight(DateTime date) {
-    logger.d("HighlightAnimationNotifier: startHighlight for $date");
-    // Cancel any existing timer
-    _blinkTimer?.cancel();
-    
-    final normalizedDate = DateTime(date.year, date.month, date.day);
-    int blinkCount = 0;
-    // 5回トグル (On -> Off -> On -> Off -> On -> End(Off)) = 約1.5秒
-    const int maxBlinks = 5; 
-    const blinkDuration = Duration(milliseconds: 300);
+  /// 指定した日付のハイライト明滅を開始する
+  void startHighlight(DateTime date, {Duration duration = const Duration(milliseconds: 1500), Duration interval = const Duration(milliseconds: 300)}) {
+    logger.d("Starting highlight animation for $date");
+    _blinkTimer?.cancel(); // 既存のタイマーをキャンセル
 
-    _blinkTimer = Timer.periodic(blinkDuration, (timer) {
-      if (!mounted) {
-        timer.cancel();
-        return;
-      }
+    final int blinkCount = (duration.inMilliseconds / interval.inMilliseconds).floor();
+    int currentBlink = 0;
 
-      blinkCount++;
-      if (blinkCount > maxBlinks) {
-        // Stop timer and reset state
+    _blinkTimer = Timer.periodic(interval, (timer) {
+      if (currentBlink >= blinkCount) {
         timer.cancel();
-        if (mounted) { // mounted チェックを追加
-          _ref.read(highlightedDateProvider.notifier).state = null;
-        }
-        logger.d("HighlightAnimationNotifier: Blink finished for $normalizedDate.");
+        _ref.read(highlightedDateProvider.notifier).state = null; // 確実にハイライトを消す
+        state = false;
+        logger.d("Highlight animation finished for $date");
       } else {
-        if (mounted) { // mounted チェックを追加
-          // Toggle highlight
-          if (blinkCount % 2 == 1) {
-            // Odd: Show highlight (On)
-            _ref.read(highlightedDateProvider.notifier).state = normalizedDate;
-             logger.v("HighlightAnimationNotifier: Blink ON (count $blinkCount)");
-          } else {
-            // Even: Hide highlight (Off)
-            _ref.read(highlightedDateProvider.notifier).state = null;
-             logger.v("HighlightAnimationNotifier: Blink OFF (count $blinkCount)");
-          }
-        }
+        final bool isCurrentlyHighlighted = _ref.read(highlightedDateProvider.notifier).state != null;
+        _ref.read(highlightedDateProvider.notifier).state = isCurrentlyHighlighted ? null : date;
+        state = !isCurrentlyHighlighted; // state も連動させる (bool)
       }
+      currentBlink++;
     });
-
-    // Ensure the first blink starts immediately (On)
-    if (mounted) { // mounted チェックを追加
-      _ref.read(highlightedDateProvider.notifier).state = normalizedDate;
-      logger.v("HighlightAnimationNotifier: Blink ON (initial)");
-    }
   }
 
   @override
@@ -112,7 +80,6 @@ class HighlightAnimationNotifier extends StateNotifier<bool> {
     super.dispose();
   }
 }
-// *** P1: ハイライト用 Provider ここまで ***
 
 
 // --- P0/P1/P2 データ管理 ---
@@ -121,7 +88,8 @@ final cycleDataProvider =
   logger.d("cycleDataProvider initializing..."); // Log provider initialization
   final notifier = CycleDataNotifier(ref);
   ref.listen(currentCycleIndexProvider, (_, nextIndex) {
-     logger.d("Cycle index changed to $nextIndex, resetting goldenTimeProvider.");
+     // (★ 修正: logger.v -> logger.t)
+     logger.t("Cycle index changed to $nextIndex, resetting goldenTimeProvider.");
      // Check if notifier state is empty before resetting, maybe not needed if cycle changes
      // final cycles = ref.read(cycleDataProvider);
      // if (cycles.isNotEmpty && nextIndex < cycles.length) {
@@ -167,7 +135,8 @@ class CycleDataNotifier extends StateNotifier<List<CycleData>> {
       logger.d("cycleBox opened. Contains ${_cycleBox!.length} items."); // Use ! after successful open
       // *** 追加ログ: Boxの中身を具体的に表示 ***
       _cycleBox!.toMap().forEach((key, value) {
-        logger.d("  Hive Key: $key, StartDate: ${value.startDate}, Records: ${value.records?.length ?? 'null'}");
+        // (★ 修正: logger.v -> logger.t)
+        logger.t("  Hive Key: $key, StartDate: ${value.startDate}, Records: ${value.records?.length ?? 'null'}");
       });
       // *** 追加ログここまで ***
 
@@ -284,8 +253,9 @@ class CycleDataNotifier extends StateNotifier<List<CycleData>> {
 
 
   /// 指定された ID の CycleData を取得する
+  /// (★ 修正: logger.v -> logger.t)
   CycleData? getCycleById(String cycleId) {
-    logger.d("Attempting to get CycleData by ID: $cycleId"); // Log ID lookup
+    logger.t("Attempting to get CycleData by ID: $cycleId"); // Log ID lookup
     // Use the state as the primary source of truth after initialization
     try {
       // Find in current state first
@@ -342,7 +312,8 @@ class CycleDataNotifier extends StateNotifier<List<CycleData>> {
       logger.d("Initial cycle created successfully with ID: ${newCycle.id}. Box now contains ${box.length} items.");
        // *** 追加ログ: 保存後のBoxの中身を確認 ***
       box.toMap().forEach((key, value) {
-        logger.d("  After Create - Hive Key: $key, StartDate: ${value.startDate}");
+        // (★ 修正: logger.v -> logger.t)
+        logger.t("  After Create - Hive Key: $key, StartDate: ${value.startDate}");
       });
       // *** 追加ログここまで ***
       // Note: The watch listener should update the state automatically.
@@ -438,7 +409,7 @@ class CycleDataNotifier extends StateNotifier<List<CycleData>> {
       }
     } catch (e, stackTrace) {
        logger.e("Error adding or updating record for cycle $cycleId", error: e, stackTrace: stackTrace);
-       // Rethrow or handle UI feedback if needed
+       // Rethrow or provide feedback
         throw Exception("Failed to save record: $e");
     }
   }
@@ -517,12 +488,15 @@ bool isSameDay(DateTime date1, DateTime date2) {
 
 // --- 現在表示中の周期データを監視する Provider ---
 final currentCycleDataProvider = Provider<AsyncValue<CycleData?>>((ref) {
-  logger.d("currentCycleDataProvider executing..."); // Log provider execution
+  // (★ 修正: logger.v -> logger.t)
+  logger.t("currentCycleDataProvider executing..."); // Log provider execution
   // (修正) List<CycleData> を直接watchする
   final allCycles = ref.watch(cycleDataProvider);
-  logger.d("cycleDataProvider state updated. Total cycles: ${allCycles.length}");
+  // (★ 修正: logger.v -> logger.t)
+  logger.t("cycleDataProvider state updated. Total cycles: ${allCycles.length}");
   final currentIndex = ref.watch(currentCycleIndexProvider);
-  logger.d("Current cycle index: $currentIndex");
+  // (★ 修正: logger.v -> logger.t)
+  logger.t("Current cycle index: $currentIndex");
 
   // .when を使わずに List を直接処理する
   if (allCycles.isEmpty) {
@@ -535,9 +509,10 @@ final currentCycleDataProvider = Provider<AsyncValue<CycleData?>>((ref) {
       final cycle = allCycles[currentIndex];
       logger.d("Returning cycle data for index $currentIndex, ID: ${cycle.id}, StartDate: ${cycle.startDate}");
       // Log records count for debugging
-      logger.d("Cycle ID: ${cycle.id} has ${cycle.records?.length ?? 0} records.");
+      // (★ 修正: logger.v -> logger.t)
+      logger.t("Cycle ID: ${cycle.id} has ${cycle.records?.length ?? 0} records.");
       // *** 追加ログ: records の中身も一部表示 ***
-      // cycle.records?.take(5).forEach((rec) => logger.d("  Record: ${rec.date}, BBT=${rec.bbt}, Test=${rec.testResult}, Timing=${rec.isTiming}"));
+      // cycle.records?.take(5).forEach((rec) => logger.t("  Record: ${rec.date}, BBT=${rec.bbt}, Test=${rec.testResult}, Timing=${rec.isTiming}"));
       // *** 追加ログここまで ***
      return AsyncValue.data(cycle);
    } else {
@@ -546,7 +521,8 @@ final currentCycleDataProvider = Provider<AsyncValue<CycleData?>>((ref) {
      if (allCycles.isNotEmpty) {
        final cycle = allCycles[0];
        logger.d("Falling back to cycle data for index 0, ID: ${cycle.id}, StartDate: ${cycle.startDate}");
-       logger.d("Fallback Cycle ID: ${cycle.id} has ${cycle.records?.length ?? 0} records.");
+       // (★ 修正: logger.v -> logger.t)
+       logger.t("Fallback Cycle ID: ${cycle.id} has ${cycle.records?.length ?? 0} records.");
        // Correct the index state if it was out of bounds
        Future.microtask(() {
           // Check mounted is not possible here, rely on read/notifier check
@@ -561,4 +537,3 @@ final currentCycleDataProvider = Provider<AsyncValue<CycleData?>>((ref) {
      }
    }
 });
-
