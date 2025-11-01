@@ -7,12 +7,14 @@ plugins {
 
 android {
     namespace = "com.example.capaci" // (名称を capaci に修正)
-    compileSdk = 34 // *** P3: 通知機能のため 34 に変更 ***
+    compileSdk = 36 // *** 修正: ビルドエラー (SDK 34) に対応し 36 に変更 ***
     ndkVersion = flutter.ndkVersion
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // *** 修正: ビルドエラー (Desugaring) に対応 ***
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -42,3 +44,9 @@ android {
 flutter {
     source = "../.."
 }
+
+// *** 修正: ビルドエラー (Desugaring) に対応 ***
+dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4") // Java 8+ APIサポートを追加
+}
+

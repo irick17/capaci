@@ -33,12 +33,17 @@ class CycleRecord extends HiveObject { // HiveObject を継承
   @HiveField(4)
   bool isTiming; // タイミングを取ったか
 
+  // *** [TODO 4] 生理記録フラグを追加 ***
+  @HiveField(5)
+  bool isPeriod; // 生理中か
+
   CycleRecord({
     required this.date,
     this.bbt,
     this.testResult = TestResult.none,
     this.imagePath,
     this.isTiming = false, // デフォルトは false
+    this.isPeriod = false, // *** [TODO 4] デフォルトは false ***
   });
 }
 

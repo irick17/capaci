@@ -12,9 +12,8 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # P0/P1: グラフ表示 (v26系)
-  # *** 修正: intl ^0.20.2 と互換性のあるバージョン (ログの提案) に更新 ***
-  syncfusion_flutter_charts: ^31.2.4 # 元: ^26.1.42
+  # P0/P1: グラフ表示 (v31系)
+  syncfusion_flutter_charts: ^31.2.4
 
   # P1/P2: 状態管理 (v2 系)
   flutter_riverpod: ^2.5.1
@@ -26,8 +25,7 @@ dependencies:
   # P1/P2: トースト (v8系)
   fluttertoast: ^8.2.6
 
-  # 日付フォーマット用 (v0.19系)
-  # *** 修正: SDKの要求 (0.20.2) に合わせる ***
+  # 日付フォーマット用 (v0.20系)
   intl: ^0.20.2
 
   # --- V1.1 (5.1) データ永続化 ---
@@ -52,10 +50,10 @@ dependencies:
   # P3: カレンダー連携機能
   add_2_calendar: ^3.0.1
 
-  # *** 修正: v2 世代の riverpod と互換性のある v16 系 ***
-  flutter_local_notifications: ^16.3.2 
+  # *** 修正: ビルドエラー (v16) のため v17 系にアップグレード ***
+  flutter_local_notifications: ^17.1.2 
 
-  # *** TODO 2: タイムゾーンパッケージ ***
+  # P3: スケジュール通知 (タイムゾーン)
   timezone: ^0.9.4
 
   cupertino_icons: ^1.0.8

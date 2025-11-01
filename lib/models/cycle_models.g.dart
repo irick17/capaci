@@ -22,13 +22,14 @@ class CycleRecordAdapter extends TypeAdapter<CycleRecord> {
       testResult: fields[2] as TestResult,
       imagePath: fields[3] as String?,
       isTiming: fields[4] as bool,
+      isPeriod: fields[5] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, CycleRecord obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.date)
       ..writeByte(1)
@@ -38,7 +39,9 @@ class CycleRecordAdapter extends TypeAdapter<CycleRecord> {
       ..writeByte(3)
       ..write(obj.imagePath)
       ..writeByte(4)
-      ..write(obj.isTiming);
+      ..write(obj.isTiming)
+      ..writeByte(5)
+      ..write(obj.isPeriod);
   }
 
   @override

@@ -47,6 +47,9 @@ class _RecordModalState extends ConsumerState<RecordModal> {
   String? _existingImagePath; // 既存の画像パス
   bool _isLoading = false; // データロード中フラグ
 
+  // *** [TODO 4] 生理記録用の状態 ***
+  bool _isPeriod = false;
+
   // (二次導線 TODO 8 のための State)
   bool _alsoRecordTiming = false;
 
@@ -90,7 +93,7 @@ class _RecordModalState extends ConsumerState<RecordModal> {
             existingRecord = cycleData.records!.firstWhere(
               (r) => isSameDay(r.date, date),
             );
-             logger.d("Existing record found: BBT=${existingRecord.bbt}, Test=${existingRecord.testResult}, Timing=${existingRecord.isTiming}");
+             logger.d("Existing record found: BBT=${existingRecord.bbt}, Test=${existingRecord.testResult}, Timing=${existingRecord.isTiming}, Period=${existingRecord.isPeriod}");
           } catch (e) {
              logger.d("No existing record found for $date.");
             existingRecord = null;
@@ -110,6 +113,7 @@ class _RecordModalState extends ConsumerState<RecordModal> {
     _currentBBTFirstDecimal = 5;
     _imageFile = null;
     _existingImagePath = null;
+    _isPeriod = false; // *** [TODO 4] リセット ***
     _alsoRecordTiming = false;
      logger.d("RecordModal: Reset local state variables.");
 
@@ -126,8 +130,9 @@ class _RecordModalState extends ConsumerState<RecordModal> {
          logger.d("  Existing BBT is null.");
       }
       _existingImagePath = existingRecord.imagePath;
+      _isPeriod = existingRecord.isPeriod; // *** [TODO 4] 既存データをロード ***
       _alsoRecordTiming = existingRecord.isTiming;
-       logger.d("  Applied TestResult: $_selectedTestResult, ImagePath: $_existingImagePath, Timing: $_alsoRecordTiming");
+       logger.d("  Applied TestResult: $_selectedTestResult, ImagePath: $_existingImagePath, Timing: $_alsoRecordTiming, Period: $_isPeriod");
     } else {
        logger.d("No existing record to apply.");
     }
@@ -211,6 +216,10 @@ class _RecordModalState extends ConsumerState<RecordModal> {
                    const SizedBox(height: 8),
                    _buildImagePicker(context, textTheme, colorScheme),
                    const SizedBox(height: 16),
+
+                   // *** [TODO 4] 生理記録トグルを追加 ***
+                   _buildPeriodToggle(textTheme, colorScheme),
+                   const SizedBox(height: 8), // トグル間のスペース
 
                    _buildTimingToggle(textTheme, colorScheme),
                    const SizedBox(height: 24),
@@ -558,6 +567,52 @@ class _RecordModalState extends ConsumerState<RecordModal> {
     }
   }
 
+  /// *** [TODO 4] 生理記録トグルウィジェット ***
+  Widget _buildPeriodToggle(TextTheme textTheme, ColorScheme colorScheme) {
+    // (AppStrings に追加するのが望ましいが、一旦ハードコード)
+    const String periodToggleLabel = "（🩸）生理中ですか？";
+
+    return SwitchListTile(
+      title: Text(
+        periodToggleLabel,
+        style: textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
+      ),
+      value: _isPeriod,
+      onChanged: (bool value) {
+        logger.d("Period toggle changed: $value");
+        setState(() {
+          _isPeriod = value;
+        });
+      },
+      secondary: Icon(
+        _isPeriod ? Icons.water_drop : Icons.water_drop_outlined, // 生理アイコン
+        color: colorScheme.error, // 生理は赤（エラー色）で表現
+      ),
+      contentPadding: EdgeInsets.zero,
+      // activeColor: colorScheme.error, // スイッチのトラック色
+      // (非推奨の activeColor の代わりに thumbColor と trackColor を使用)
+      thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+        if (states.contains(WidgetState.selected)) {
+          return colorScheme.error; // サム（丸）の色
+        }
+        return null; // デフォルト
+      }),
+      trackColor: WidgetStateProperty.resolveWith<Color?>((states) {
+        if (states.contains(WidgetState.selected)) {
+          return colorScheme.error.withAlpha(100); // 薄い赤色のトラック
+        }
+        return null; // デフォルト
+      }),
+      trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((states) {
+         if (states.contains(WidgetState.selected)) {
+           return Colors.transparent;
+         }
+         return colorScheme.outline; // OFF時の枠線
+      }),
+    );
+  }
+
+
   /// (二次導線 TODO 8) タイミング記録トグルウィジェット
   Widget _buildTimingToggle(TextTheme textTheme, ColorScheme colorScheme) {
     // Use SwitchListTile for better layout and tap handling
@@ -578,8 +633,29 @@ class _RecordModalState extends ConsumerState<RecordModal> {
           color: colorScheme.tertiary
           ),
         contentPadding: EdgeInsets.zero, // Remove default padding if needed
-        // *** 修正: 'activeColor' (非推奨) を 'activeTrackColor' に変更 ***
-        activeTrackColor: colorScheme.tertiary, // Color of the switch track when on
+        
+        // *** 修正: 'activeColor' は非推奨 ***
+        // activeColor: colorScheme.tertiary, 
+        
+        // *** 修正: M3準拠の thumbColor / trackColor を使用 ***
+        thumbColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.onPrimary; // サム（丸）の色
+          }
+          return null; // デフォルト
+        }),
+        trackColor: WidgetStateProperty.resolveWith<Color?>((states) {
+          if (states.contains(WidgetState.selected)) {
+            return colorScheme.tertiary; // トラックの色
+          }
+          return null; // デフォルト
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith<Color?>((states) {
+           if (states.contains(WidgetState.selected)) {
+             return Colors.transparent;
+           }
+           return colorScheme.outline; // OFF時の枠線
+        }),
       );
   }
 
@@ -587,18 +663,21 @@ class _RecordModalState extends ConsumerState<RecordModal> {
   void _submitRecord() {
      logger.d("Submit record called.");
     // Combine integer and decimal parts for BBT
-    // (*** 修正: _currentBBTInteger/_currentBBTFirstDecimal は null にならないため、null チェックを削除 ***)
-    final double? bbtValue = _currentBBTInteger + (_currentBBTFirstDecimal / 10.0);
+    // (修正: 厳密なnullチェック)
+    final double? bbtValue = (_currentBBTInteger == 36 && _currentBBTFirstDecimal == 5)
+        ? null // デフォルト値のままなら null として扱う (TODO: 要検討。UI側で「未入力」ボタンを設ける方が明確かも)
+        : _currentBBTInteger + (_currentBBTFirstDecimal / 10.0);
 
-    logger.d("Preparing record: Date=$_selectedDate, BBT=$bbtValue, Test=$_selectedTestResult, Image(New)=${_imageFile?.path}, Image(Existing)=$_existingImagePath, Timing=$_alsoRecordTiming");
+    logger.d("Preparing record: Date=$_selectedDate, BBT=$bbtValue, Test=$_selectedTestResult, Image(New)=${_imageFile?.path}, Image(Existing)=$_existingImagePath, Timing=$_alsoRecordTiming, Period=$_isPeriod");
 
-    final newRecord = CycleRecord(
+    final CycleRecord newRecord = CycleRecord(
       date: _selectedDate,
       bbt: bbtValue,
       testResult: _selectedTestResult,
       // Prioritize newly picked image, otherwise use existing path
       imagePath: _imageFile?.path ?? _existingImagePath,
       isTiming: _alsoRecordTiming, // Use the state of the toggle
+      isPeriod: _isPeriod, // *** [TODO 4] isPeriod の値を追加 ***
     );
 
      logger.d("Calling onSubmit callback with prepared record.");

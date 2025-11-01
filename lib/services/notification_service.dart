@@ -1,30 +1,36 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// *** TODO 2: timezone と AppStrings をインポート ***
+// *** [TODO 2] timezone と AppStrings をインポート ***
+import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
-import 'package:capaci/constants/app_strings.dart'; // (パスを修正)
+import '../constants/app_strings.dart';
+import '../providers/settings_provider.dart'; // [TODO 3] AppSettings のため
 import 'package:capaci/utils/logger.dart'; // (パスを修正)
+// *** エラー修正: 'TimeOfDay' のために material.dart をインポート ***
+import 'package:flutter/material.dart'; 
+
 
 /// 通知サービスを提供する Riverpod プロバイダー
 final notificationServiceProvider = Provider<NotificationService>((ref) {
-  // *** 修正: ref は不要になったため、コンストラクタに渡さない ***
-  return NotificationService();
+  // *** 警告修正: ref を渡す ***
+  return NotificationService(ref);
 });
 
 /// P3: ローカル通知を管理するサービスクラス
 class NotificationService {
-  // *** 修正: _ref は未使用のため削除 ***
-  // final Ref _ref;
+  // *** 警告修正: _ref を使用する (または削除する) ***
+  final Ref _ref; // 
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
-  
-  // *** TODO 2: リマインダー用の通知IDを定義 ***
+
+  // *** [TODO 2] リマインダー用の通知IDを定義 ***
+  // (外部 (home_screen) から参照するため static const にする)
   static const int morningReminderId = 100;
   static const int eveningReminderId = 101;
 
 
-  // *** 修正: _ref を削除 ***
-  NotificationService();
+  // *** 警告修正: ref を受け取る ***
+  NotificationService(this._ref);
 
   /// 通知サービスの初期化
   Future<void> initialize() async {
@@ -33,12 +39,14 @@ class NotificationService {
     // 1. Android の初期設定
     // (通知アイコンは AndroidManifest.xml の android:icon="@mipmap/ic_launcher" を参照)
     // *** 修正: const -> final ***
-    final AndroidInitializationSettings initializationSettingsAndroid =
+    // *** 警告修正: prefer_const_constructors ***
+    const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('ic_launcher'); // 'app_icon' から 'ic_launcher' に変更
 
     // 2. iOS の初期設定
     // *** 修正: const -> final ***
-    final DarwinInitializationSettings initializationSettingsIOS =
+    // *** 警告修正: prefer_const_constructors ***
+    const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
       requestAlertPermission: false, // 権限要求は別途手動で行う
       requestBadgePermission: false,
@@ -48,7 +56,8 @@ class NotificationService {
 
     // 3. 初期化設定の統合
     // *** 修正: const -> final ***
-    final InitializationSettings initializationSettings =
+    // *** 警告修正: prefer_const_constructors ***
+    const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsIOS,
@@ -154,109 +163,112 @@ class NotificationService {
     }
   }
 
-  // *** TODO 2: 検査リマインダー用のスケジュール通知メソッド ***
-
-  /// 指定した時刻（時・分）で、デバイスのローカルタイムゾーンにおける次の通知日時を取得する
-  tz.TZDateTime _nextInstanceOfTime(int hour, int minute) {
-    final tz.TZDateTime now = tz.TZDateTime.now(tz.local); // デバイスのローカルタイムゾーンの現在時刻
-    tz.TZDateTime scheduledDate =
-        tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
-    
-    // もし計算した時刻が現在時刻より前（つまり今日既に過ぎている）なら、明日の同じ時刻に設定
-    if (scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(const Duration(days: 1));
+  // *** [TODO 2] 検査リマインダー用のスケジュール通知メソッド ***
+  /// 毎日決まった時刻に通知をスケジュールする
+  /// (*** [TODO 3] AppSettings を引数で受け取るように変更 ***)
+  Future<void> scheduleTestReminders(AppSettings settings) async {
+    // 1. 通知が OFF なら、既存の通知をキャンセルして終了
+    if (!settings.notificationsEnabled) {
+      logger.d("Notifications are disabled. Cancelling all scheduled reminders.");
+      await cancelNotification(morningReminderId);
+      await cancelNotification(eveningReminderId);
+      return;
     }
-    logger.d("Calculated next instance of $hour:$minute: $scheduledDate (local time)");
-    return scheduledDate;
+
+    // 2. 通知が ON なら、設定時刻でスケジュール
+    try {
+      // --- 午前 ---
+      // *** [TODO 3] ハードコードされた TimeOfDay(10, 0) の代わりに settings を使用 ***
+      // *** エラー修正: reminderTimeMorning -> morningTime ***
+      final tz.TZDateTime nextMorningTime = _nextInstanceOfTime(settings.morningTime);
+      await _scheduleDailyNotification(
+        id: morningReminderId,
+        title: AppStrings.notificationReminderTitle,
+        body: AppStrings.notificationReminderBody,
+        scheduledTime: nextMorningTime,
+      );
+      logger.i("Scheduled morning reminder (ID $morningReminderId) for $nextMorningTime");
+
+      // --- 午後 ---
+      // *** [TODO 3] ハードコードされた TimeOfDay(20, 0) の代わりに settings を使用 ***
+      // *** エラー修正: reminderTimeEvening -> eveningTime ***
+      final tz.TZDateTime nextEveningTime = _nextInstanceOfTime(settings.eveningTime);
+       await _scheduleDailyNotification(
+        id: eveningReminderId,
+        title: AppStrings.notificationReminderTitle,
+        body: AppStrings.notificationReminderBody,
+        scheduledTime: nextEveningTime,
+      );
+      logger.i("Scheduled evening reminder (ID $eveningReminderId) for $nextEveningTime");
+
+    } catch (e, stackTrace) {
+       logger.e("Failed to schedule test reminders.", error: e, stackTrace: stackTrace);
+    }
   }
 
-  /// 内部用のスケジュールメソッド
+  /// 内部ヘルパー: 毎日同じ時刻にスケジュール
   Future<void> _scheduleDailyNotification({
     required int id,
     required String title,
     required String body,
-    required int hour,
-    required int minute,
+    required tz.TZDateTime scheduledTime,
   }) async {
-    logger.i("Scheduling daily notification: ID=$id, Time=$hour:$minute");
-    try {
-      final tz.TZDateTime scheduledDateTime = _nextInstanceOfTime(hour, minute);
+    final NotificationDetails platformChannelSpecifics =
+        NotificationDetails(
+      android: _androidNotificationDetails(),
+      iOS: _darwinNotificationDetails(),
+    );
 
-      final NotificationDetails platformChannelSpecifics =
-          NotificationDetails(
-        android: _androidNotificationDetails(),
-        iOS: _darwinNotificationDetails(),
-      );
-
-      await _flutterLocalNotificationsPlugin.zonedSchedule(
-        id,
-        title,
-        body,
-        scheduledDateTime,
-        platformChannelSpecifics,
-        // *** 修正: Android 12 以降の正確なアラーム許可が必要 (AndroidManifest.xmlに追加) ***
-        // (ひとまず allowWhileIdle: true を設定)
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        // androidAllowWhileIdle: true, // (古い記述)
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
-        // 毎日同じ時刻に繰り返す
-        matchDateTimeComponents: DateTimeComponents.time,
-        payload: 'reminder_$id',
-      );
-      logger.i("Successfully scheduled notification ID=$id");
-    } catch (e, stackTrace) {
-       logger.e("Failed to schedule notification ID=$id", error: e, stackTrace: stackTrace);
-    }
+    await _flutterLocalNotificationsPlugin.zonedSchedule(
+      id,
+      title,
+      body,
+      scheduledTime,
+      platformChannelSpecifics,
+      // *** 修正: Android 12 (API 31) 以上での権限 ***
+      // (注: scheduleTestReminders がアプリ起動時に呼ばれる前提)
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      // (iOS/Android共通) 毎日同じ "時刻" に繰り返す
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
   }
 
-  /// 検査リマインダー (午前・午後) をスケジュールする
-  Future<void> scheduleTestReminders() async {
-    logger.d("Scheduling test reminders (AM & PM)...");
+
+  /// 内部ヘルパー: TimeOfDay から次の tz.TZDateTime を計算
+  tz.TZDateTime _nextInstanceOfTime(TimeOfDay time) {
+    // デバイスの現在時刻とローカルタイムゾーンを取得
+    final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     
-    // TODO: この時刻は後で設定画面 (P3) から変更できるようにする
-    const int morningHour = 10; // 10:00 AM
-    const int eveningHour = 20; // 8:00 PM (20:00)
-
-    // 午前リマインダー
-    await _scheduleDailyNotification(
-      id: morningReminderId,
-      title: AppStrings.notificationReminderTitle,
-      body: AppStrings.notificationReminderBody,
-      hour: morningHour,
-      minute: 0,
+    // 今日の指定時刻を tz.TZDateTime で作成
+    tz.TZDateTime scheduledDate = tz.TZDateTime(
+      tz.local,
+      now.year,
+      now.month,
+      now.day,
+      time.hour,
+      time.minute,
     );
 
-    // 午後リマインダー
-    await _scheduleDailyNotification(
-      id: eveningReminderId,
-      title: AppStrings.notificationReminderTitle,
-      body: AppStrings.notificationReminderBody,
-      hour: eveningHour,
-      minute: 0,
-    );
+    // もし指定時刻が既に過ぎていたら、明日の同じ時刻に設定
+    if (scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(const Duration(days: 1));
+    }
+
+    return scheduledDate;
   }
 
-  /// 特定のIDの通知をキャンセルする
+  /// [TODO 3] 特定のIDの通知をキャンセル
   Future<void> cancelNotification(int id) async {
-     logger.i("Cancelling notification with ID: $id");
-     try {
-       await _flutterLocalNotificationsPlugin.cancel(id);
-        logger.i("Notification ID=$id cancelled.");
-     } catch (e, stackTrace) {
-       logger.e("Failed to cancel notification ID=$id", error: e, stackTrace: stackTrace);
-     }
+    logger.d("Cancelling notification ID: $id");
+    await _flutterLocalNotificationsPlugin.cancel(id);
   }
 
-  /// スケジュールされたすべての通知をキャンセルする
+  /// [TODO 3] すべての通知をキャンセル
   Future<void> cancelAllNotifications() async {
-    logger.i("Cancelling ALL notifications...");
-     try {
-       await _flutterLocalNotificationsPlugin.cancelAll();
-       logger.i("All notifications cancelled.");
-     } catch (e, stackTrace) {
-        logger.e("Failed to cancel all notifications", error: e, stackTrace: stackTrace);
-     }
+    logger.d("Cancelling ALL notifications.");
+    await _flutterLocalNotificationsPlugin.cancelAll();
   }
 }
 
