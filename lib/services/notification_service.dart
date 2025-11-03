@@ -1,7 +1,8 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 // *** [TODO 2] timezone と AppStrings をインポート ***
-import 'package:timezone/data/latest_all.dart' as tz;
+// [修正] 'latest_all.dart' は main.dart で初期化するため不要
+// import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 import '../constants/app_strings.dart';
 import '../providers/settings_provider.dart'; // [TODO 3] AppSettings のため
@@ -13,13 +14,15 @@ import 'package:flutter/material.dart';
 /// 通知サービスを提供する Riverpod プロバイダー
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   // *** 警告修正: ref を渡す ***
-  return NotificationService(ref);
+  // [修正] ref は不要なため、コンストラクタから削除
+  return NotificationService();
 });
 
 /// P3: ローカル通知を管理するサービスクラス
 class NotificationService {
   // *** 警告修正: _ref を使用する (または削除する) ***
-  final Ref _ref; // 
+  // [修正] _ref は不要なため削除
+  // final Ref _ref;
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
@@ -30,7 +33,8 @@ class NotificationService {
 
 
   // *** 警告修正: ref を受け取る ***
-  NotificationService(this._ref);
+  // [修正] ref は不要なため削除
+  NotificationService();
 
   /// 通知サービスの初期化
   Future<void> initialize() async {

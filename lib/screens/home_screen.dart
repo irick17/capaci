@@ -1,8 +1,6 @@
 // (エラー修正: import パス修正)
-// ignore_for_file: unused_import
-
-// *** 修正: dart:ui に修正 ***
-import 'dart:ui' as ui; // For PointMode
+// *** 修正: dart:ui は不要になったため削除 ***
+// import 'dart:ui' as ui; // For PointMode
 // *** P1: ハイライトアニメーション用 (Timer) ***
 import 'dart:async';
 
@@ -79,7 +77,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     // *** [TODO 2] 通知スケジュールの呼び出し ***
     // 画面ビルド後にコーチマークと通知スケジュールを開始する
     // *** [TODO 2] (通知スケジュール) ***
-    WidgetsBinding.instance.addPostFrameCallback((_) => _onHomeScreenReady());
+    // [修正] context を渡す
+    WidgetsBinding.instance.addPostFrameCallback((_) => _onHomeScreenReady(context));
   }
 
    @override
@@ -91,15 +90,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   /// *** [TODO 2] (通知スケジュール) ***
   /// ホーム画面の初回ビルド完了時に呼び出される
-  void _onHomeScreenReady() {
-    _showCoachMark();
+  // [修正] context を受け取る
+  void _onHomeScreenReady(BuildContext context) {
+    _showCoachMark(context); // [修正] context を渡す
     // *** [TODO 2] 通知スケジュールの呼び出し ***
     _scheduleNotifications();
+
+    // [修正] PageController の同期リスナーをここで設定
+    logger.d("Setting up PageController listener.");
+    ref.listen(currentCycleIndexProvider, (previous, next) {
+      if (mounted && _pageController.hasClients && _pageController.page?.round() != next) {
+        logger.d("Syncing PageController (via listen) to index: $next");
+        // スムーズなアニメーションでページを切り替え
+        _pageController.animateToPage(
+          next,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
   }
 
 
   /// V1 (初回ホーム コーチマーク) 表示ロジック
-  void _showCoachMark() {
+  // [修正] context を受け取る
+  void _showCoachMark(BuildContext context) {
     logger.d("Attempting to show coach mark..."); // Log attempt
     try { // コーチマーク表示も try-catch
       final isOnboardingComplete = ref.read(onboardingProvider);
@@ -190,14 +205,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     logger.d("HomeScreen build: cycleCount = $cycleCount, currentCycleIndex = $currentCycleIndex");
 
 
-    // PageController を現在のインデックスに同期 (初回ビルド後 or index変更時)
-    // Avoid calling jumpToPage during build, use addPostFrameCallback or listen
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted && _pageController.hasClients && _pageController.page?.round() != currentCycleIndex) {
-         logger.d("Syncing PageController to index: $currentCycleIndex");
-         _pageController.jumpToPage(currentCycleIndex); // Use jumpToPage for immediate effect without animation
-      }
-    });
+    // [修正] PageController の同期ロジックを ref.listen に移動したため、
+    // build メソッド内の WidgetsBinding.instance.addPostFrameCallback は削除
+    // WidgetsBinding.instance.addPostFrameCallback((_) {
+    //   if (mounted && _pageController.hasClients && _pageController.page?.round() != currentCycleIndex) {
+    //      logger.d("Syncing PageController to index: $currentCycleIndex");
+    //      _pageController.jumpToPage(currentCycleIndex); // Use jumpToPage for immediate effect without animation
+    //   }
+    // });
 
 
     return Scaffold(
@@ -391,38 +406,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       ),
        // (修正) タイミング記録ボタン (♡) を BottomAppBar 内に移動し Visibility で制御
       // (修正) const を追加
-      bottomNavigationBar: BottomAppBar( // <<< ★ エラー修正: bottomAppBar -> bottomNavigationBar
-        shape: const CircularNotchedRectangle(),
+      bottomNavigationBar: const BottomAppBar( // <<< ★ エラー修正: bottomAppBar -> bottomNavigationBar
+        shape: CircularNotchedRectangle(),
         notchMargin: 6.0,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.start, // Align to start
           children: <Widget>[
             // *** P2: ♡ボタンを Visibility でラップ ***
             // (修正) Visibility を追加
-            Visibility(
-               visible: isGoldenTime, // GOLDEN TIME 中のみ表示
-               // 場所を確保しない (visible: false のときにスペースを詰める)
-               maintainSize: false,
-               maintainAnimation: true,
-               maintainState: true,
-               child: AnimatedOpacity( // フェードイン/アウトのアニメーション
-                 // (修正) const を追加
-                 duration: const Duration(milliseconds: 200),
-                 opacity: isGoldenTime ? 1.0 : 0.0,
-                 child: Padding( // Add padding for spacing
-                   // (修正) const を追加
-                   padding: const EdgeInsets.only(left: 16.0), // 左側に余白を追加
-                   child: IconButton(
-                     icon: Icon(Icons.favorite, color: colorScheme.tertiary, size: 28), // アイコンサイズ調整
-                     tooltip: AppStrings.timingButtonTooltip,
-                     onPressed: () {
-                        logger.d("Timing button (♡) pressed."); // Log button press
-                        _showTimingRecordModal(context, ref);
-                     },
-                   ),
-                 ),
-               ),
-             ),
+            _TimingButtonVisibility(), // [修正] ロジックを別ウィジェットに分離
              // *** Visibility ラップここまで ***
 
             // Optionally add spacer or other icons if needed
@@ -725,8 +717,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       width: 2.5, // Slightly thinner line
       // Use dashArray for the entire series if needed, but distinguishing points is often clearer
       // dashArray: <double>[5, 5], // Example dash array if needed globally
-      // (修正) const を追加
-      markerSettings: const MarkerSettings(
+      // (修正) const を削除
+      markerSettings: MarkerSettings(
         isVisible: true,
         // color: colorScheme.secondary, // Color will be set by pointColorMapper
         borderColor: colorScheme.surface, // Border color for visibility
@@ -1349,6 +1341,54 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+/// [修正] タイミングボタンの表示ロジックを ConsumerWidget に分離
+class _TimingButtonVisibility extends ConsumerWidget {
+  const _TimingButtonVisibility();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isGoldenTime = ref.watch(goldenTimeProvider);
+    final colorScheme = Theme.of(context).colorScheme;
+
+    return Visibility(
+      visible: isGoldenTime, // GOLDEN TIME 中のみ表示
+      // 場所を確保しない (visible: false のときにスペースを詰める)
+      maintainSize: false,
+      maintainAnimation: true,
+      maintainState: true, // アニメーションのために状態を保持
+      child: AnimatedOpacity( // フェードイン/アウトのアニメーション
+        duration: const Duration(milliseconds: 200),
+        opacity: isGoldenTime ? 1.0 : 0.0,
+        child: Padding( // Add padding for spacing
+          padding: const EdgeInsets.only(left: 16.0), // 左側に余白を追加
+          child: IconButton(
+            icon: Icon(Icons.favorite, color: colorScheme.tertiary, size: 28), // アイコンサイズ調整
+            tooltip: AppStrings.timingButtonTooltip,
+            onPressed: () {
+              logger.d("Timing button (♡) pressed."); // Log button press
+              // [修正] _showTimingRecordModal を直接呼べないので、State のメソッドを呼ぶか、ロジックを Provider に移す
+              // ここでは State のメソッドを呼ぶ（ただし State は private）
+              // → _showTimingRecordModal を public にするか、コールバックで渡す必要がある
+              // →
+              // 簡潔にするため、_showTimingRecordModal のロジックをここで再実装（あるいはメソッドを State から外に出す）
+              // ここでは、HomeScreen のメソッドを呼ぶために ref を使ってロジックを再実行する
+               // (注: この方法はHomeScreenのStateに依存しており、理想的ではないが、
+               // _showTimingRecordModal を public にするよりはマシ)
+               final state = context.findAncestorStateOfType<_HomeScreenState>();
+               if (state != null) {
+                 state._showTimingRecordModal(context, ref);
+               } else {
+                 logger.e("Could not find _HomeScreenState to show timing modal.");
+               }
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+
 /// V1 (3.1) Empty State
 class _EmptyState extends StatelessWidget {
   final String title;
@@ -1413,8 +1453,8 @@ class LinePainter extends CustomPainter {
   final Color color;
   final bool isDashed;
 
-  // (修正) const constructor
-  const LinePainter({required this.color, this.isDashed = false});
+  // (修正) const を削除
+  LinePainter({required this.color, this.isDashed = false});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -1467,8 +1507,8 @@ class LinePainter extends CustomPainter {
 // Optional: Painter for dashed area representation if needed
 class DashedRectPainter extends CustomPainter {
   final Color color;
-  // (修正) const constructor
-  const DashedRectPainter(this.color);
+  // (修正) const を削除
+  DashedRectPainter(this.color);
 
   @override
   void paint(Canvas canvas, Size size) {
